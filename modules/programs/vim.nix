@@ -23,6 +23,7 @@ let
     mousemodel = types.enum [ "extend" "popup" "popup_setpos" ];
     number = types.bool;
     relativenumber = types.bool;
+    ruler = types.bool;
     shiftwidth = types.int;
     smartcase = types.bool;
     tabstop = types.int;

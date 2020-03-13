@@ -11,6 +11,7 @@ let
     background = types.enum [ "dark" "light" ];
     backupdir = types.listOf types.str;
     copyindent = types.bool;
+    cursorline = types.bool;
     directory = types.listOf types.str;
     expandtab = types.bool;
     hidden = types.bool;

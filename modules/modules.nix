@@ -82,6 +82,7 @@ let
     (loadModule ./programs/matplotlib.nix { })
     (loadModule ./programs/mbsync.nix { })
     (loadModule ./programs/mercurial.nix { })
+    (loadModule ./programs/mksh.nix { })
     (loadModule ./programs/mpv.nix { })
     (loadModule ./programs/msmtp.nix { })
     (loadModule ./programs/neomutt.nix { })

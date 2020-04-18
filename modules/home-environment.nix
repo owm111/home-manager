@@ -198,6 +198,16 @@ in
       '';
     };
 
+    home.sessionVariablesExtra = mkOption {
+      type = types.lines;
+      default = "";
+      internal = true;
+      description = ''
+        Extra configuration to add to the
+        <filename>hm-session-vars.sh</filename> file.
+      '';
+    };
+
     home.packages = mkOption {
       type = types.listOf types.package;
       default = [];
@@ -226,8 +236,8 @@ in
       type = types.bool;
       description = ''
         Whether the activation script should start with an empty
-        <envvar>PATH</envvar> variable. When <literal>false</literal>
-        then the user's <envvar>PATH</envvar> will be used.
+        <envar>PATH</envar> variable. When <literal>false</literal>
+        then the user's <envar>PATH</envar> will be used.
       '';
     };
 
@@ -352,7 +362,7 @@ in
             export __HM_SESS_VARS_SOURCED=1
 
             ${config.lib.shell.exportAll cfg.sessionVariables}
-          '';
+          '' + cfg.sessionVariablesExtra;
         }
       )
     ];

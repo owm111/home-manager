@@ -1381,6 +1381,99 @@ in
           A new module is available: 'services.lieer'.
         '';
       }
+
+      {
+        time = "2020-03-15T16:55:28+00:00";
+        condition = config.programs.firefox.enable;
+        message = ''
+          In anticipation of Firefox dropping support for extension
+          sideloading[1], we now install extensions directly to
+          Firefox profiles managed through Home Manager's
+
+            'programs.firefox.profiles'
+
+          option.
+
+          Unfortunately this will most likely trigger an "Existing
+          file is in the way" error when activating your configuration
+          since Firefox keeps a copy of the add-on in the location
+          Home Manager wants to overwrite. If this is the case, remove
+          the listed '.xpi' files and try again.
+
+          This change also means that extensions installed through
+          Home Manager may disappear from unmanaged profiles in future
+          Firefox releases.
+
+          [1] https://blog.mozilla.org/addons/2019/10/31/firefox-to-discontinue-sideloaded-extensions/
+        '';
+      }
+
+      {
+        time = "2020-03-17T21:56:26+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.keynav'.
+        '';
+      }
+
+      {
+        time = "2020-03-24T22:17:20+00:00";
+        condition = config.services.compton.enable;
+        message = ''
+          The 'services.compton' module has been deprecated and
+          instead the new module 'services.picom' should be used. This
+          is because Nixpkgs no longer packages compton, and instead
+          packages the (mostly) compatible fork called picom.
+
+          The 'services.compton' and 'services.picom' modules have a
+          few differences:
+
+            - 'services.picom' has a new 'experimentalBackends'
+              option.
+
+            - 'vSync' is now a boolean value on 'services.picom', as
+              opposed to the string in 'services.compton'.
+
+          Migrating to the new picom service is simple - just change
+          all references to 'services.compton' to 'services.picom',
+          and adhere to the above changes.
+
+          The deprecated 'services.compton' will eventually be removed
+          in the future. Please update your configurations to use
+          'services.picom' as soon as possible.
+        '';
+      }
+
+      {
+        time = "2020-04-08T09:33:05+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'targets.genericLinux'.
+
+          When enabled, this module will configure various settings
+          and environment variables to make Home Manager and programs
+          installed through Nix work better on GNU/Linux distributions
+          other than NixOS.
+
+          It should not be enabled if your Home Manager configuration
+          is deployed on a NixOS host.
+        '';
+      }
+
+      {
+        time = "2020-04-08T11:51:15+00:00";
+        message = ''
+          A new module is available: 'programs.qutebrowser'
+        '';
+      }
+
+      {
+        time = "2020-04-09T09:19:38+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.mako'
+        '';
+      }
     ];
   };
 }

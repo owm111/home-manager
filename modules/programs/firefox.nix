@@ -23,7 +23,14 @@ let
     then "${firefoxConfigPath}/Profiles"
     else firefoxConfigPath;
 
+  # The extensions path shared by all profiles; will not be supported
+  # by future Firefox versions.
   extensionPath = "extensions/{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
+
+  extensionsEnvPkg = pkgs.buildEnv {
+    name = "hm-firefox-extensions";
+    paths = cfg.extensions;
+  };
 
   profiles =
     flip mapAttrs' cfg.profiles (_: profile:
@@ -58,6 +65,13 @@ in
 
 {
   meta.maintainers = [ maintainers.rycee ];
+
+  imports = [
+    (mkRemovedOptionModule ["programs" "firefox" "enableGoogleTalk"]
+      "Support for this option has been removed.")
+    (mkRemovedOptionModule ["programs" "firefox" "enableIcedTea"]
+      "Support for this option has been removed.")
+  ];
 
   options = {
     programs.firefox = {
@@ -137,7 +151,7 @@ in
             userChrome = mkOption {
               type = types.lines;
               default = "";
-              description = "Custom Firefox CSS.";
+              description = "Custom Firefox user chrome CSS.";
               example = ''
                 /* Hide tab bar in FF Quantum */
                 @-moz-document url("chrome://browser/content/browser.xul") {
@@ -150,6 +164,16 @@ in
                     visibility: collapse !important;
                   }
                 }
+              '';
+            };
+
+            userContent = mkOption {
+              type = types.lines;
+              default = "";
+              description = "Custom Firefox user content CSS.";
+              example = ''
+                /* Hide scrollbar in FF Quantum */
+                *{scrollbar-width:none !important}
               '';
             };
 
@@ -175,38 +199,6 @@ in
         type = types.bool;
         default = false;
         description = "Whether to enable the unfree Adobe Flash plugin.";
-      };
-
-      enableGoogleTalk = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to enable the unfree Google Talk plugin. This option
-          is <emphasis>deprecated</emphasis> and will only work if
-
-          <programlisting language="nix">
-          programs.firefox.package = pkgs.firefox-esr-52-unwrapped;
-          </programlisting>
-
-          and the <option>plugin.load_flash_only</option> Firefox
-          option has been disabled.
-        '';
-      };
-
-      enableIcedTea = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to enable the Java applet plugin. This option is
-          <emphasis>deprecated</emphasis> and will only work if
-
-          <programlisting language="nix">
-          programs.firefox.package = pkgs.firefox-esr-52-unwrapped;
-          </programlisting>
-
-          and the <option>plugin.load_flash_only</option> Firefox
-          option has been disabled.
-        '';
       };
     };
   };
@@ -250,8 +242,6 @@ in
         # The configuration expected by the Firefox wrapper.
         fcfg = {
           enableAdobeFlash = cfg.enableAdobeFlash;
-          enableGoogleTalkPlugin = cfg.enableGoogleTalk;
-          icedtea = cfg.enableIcedTea;
         };
 
         # A bit of hackery to force a config into the wrapper.
@@ -273,17 +263,10 @@ in
 
     home.file = mkMerge (
       [{
-        "${mozillaConfigPath}/${extensionPath}" = mkIf (cfg.extensions != []) (
-          let
-            extensionsEnv = pkgs.buildEnv {
-              name = "hm-firefox-extensions";
-              paths = cfg.extensions;
-            };
-          in {
-            source = "${extensionsEnv}/share/mozilla/${extensionPath}";
-            recursive = true;
-          }
-        );
+        "${mozillaConfigPath}/${extensionPath}" = mkIf (cfg.extensions != []) {
+          source = "${extensionsEnvPkg}/share/mozilla/${extensionPath}";
+          recursive = true;
+        };
 
         "${firefoxConfigPath}/profiles.ini" = mkIf (cfg.profiles != {}) {
           text = profilesIni;
@@ -295,10 +278,21 @@ in
             text = profile.userChrome;
           };
 
+        "${profilesPath}/${profile.path}/chrome/userContent.css" =
+          mkIf (profile.userContent != "") {
+            text = profile.userContent;
+          };
+
         "${profilesPath}/${profile.path}/user.js" =
           mkIf (profile.settings != {} || profile.extraConfig != "") {
             text = mkUserJs profile.settings profile.extraConfig;
           };
+
+        "${profilesPath}/${profile.path}/extensions" = mkIf (cfg.extensions != []) {
+          source = "${extensionsEnvPkg}/share/mozilla/${extensionPath}";
+          recursive = true;
+          force = true;
+        };
       })
     );
   };

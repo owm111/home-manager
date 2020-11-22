@@ -52,11 +52,8 @@ let
     in mapAttrs opt knownSettings;
   };
 in {
-<<<<<<< HEAD
-=======
   meta.maintainers = [ hm.maintainers.owm111 ];
 
->>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
   options = {
     programs.lf = {
       enable = mkEnableOption "lf";
@@ -64,11 +61,6 @@ in {
       settings = mkOption {
         type = lfSettingsType;
         default = { };
-<<<<<<< HEAD
-        example = { tabstop = 4; number = true; ratios = "1:1:2"; };
-        description = ''
-          An attribute set of lf settings. The attribute names and cooresponding
-=======
         example = {
           tabstop = 4;
           number = true;
@@ -76,7 +68,6 @@ in {
         };
         description = ''
           An attribute set of lf settings. The attribute names and corresponding
->>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
           values must be among the following supported options.
 
           <informaltable frame="none"><tgroup cols="1"><tbody>
@@ -126,11 +117,7 @@ in {
       cmdKeybindings = mkOption {
         type = with types; attrsOf (nullOr str);
         default = { };
-<<<<<<< HEAD
-        example = { "<c-g>" = "cmd-escape"; };
-=======
         example = literalExample ''{ "<c-g>" = "cmd-escape"; }'';
->>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
         description = ''
           Keys to bind to command line commands which can only be one of the
           builtin commands. Keys set to null or an empty string are deleted.

@@ -91,7 +91,6 @@ let
     (loadModule ./programs/mbsync.nix { })
     (loadModule ./programs/mcfly.nix { })
     (loadModule ./programs/mercurial.nix { })
-    (loadModule ./programs/mksh.nix { })
     (loadModule ./programs/mpv.nix { })
     (loadModule ./programs/msmtp.nix { })
     (loadModule ./programs/mu.nix { })

@@ -11,7 +11,6 @@ let
     background = types.enum [ "dark" "light" ];
     backupdir = types.listOf types.str;
     copyindent = types.bool;
-    cursorline = types.bool;
     directory = types.listOf types.str;
     expandtab = types.bool;
     hidden = types.bool;
@@ -24,7 +23,6 @@ let
     mousemodel = types.enum [ "extend" "popup" "popup_setpos" ];
     number = types.bool;
     relativenumber = types.bool;
-    ruler = types.bool;
     shiftwidth = types.int;
     smartcase = types.bool;
     tabstop = types.int;

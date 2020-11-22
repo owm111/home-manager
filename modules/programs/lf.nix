@@ -52,6 +52,11 @@ let
     in mapAttrs opt knownSettings;
   };
 in {
+<<<<<<< HEAD
+=======
+  meta.maintainers = [ hm.maintainers.owm111 ];
+
+>>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
   options = {
     programs.lf = {
       enable = mkEnableOption "lf";
@@ -59,9 +64,19 @@ in {
       settings = mkOption {
         type = lfSettingsType;
         default = { };
+<<<<<<< HEAD
         example = { tabstop = 4; number = true; ratios = "1:1:2"; };
         description = ''
           An attribute set of lf settings. The attribute names and cooresponding
+=======
+        example = {
+          tabstop = 4;
+          number = true;
+          ratios = "1:1:2";
+        };
+        description = ''
+          An attribute set of lf settings. The attribute names and corresponding
+>>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
           values must be among the following supported options.
 
           <informaltable frame="none"><tgroup cols="1"><tbody>
@@ -111,7 +126,11 @@ in {
       cmdKeybindings = mkOption {
         type = with types; attrsOf (nullOr str);
         default = { };
+<<<<<<< HEAD
         example = { "<c-g>" = "cmd-escape"; };
+=======
+        example = literalExample ''{ "<c-g>" = "cmd-escape"; }'';
+>>>>>>> a3a0f1289acac24ce2ffe0481bf8cabd3a6ccc64
         description = ''
           Keys to bind to command line commands which can only be one of the
           builtin commands. Keys set to null or an empty string are deleted.
@@ -162,56 +181,52 @@ in {
     };
   };
 
-  config = let
-
-  in mkIf cfg.enable {
+  config = mkIf cfg.enable {
     home.packages = [ pkgs.lf ];
 
-    xdg.configFile = {
-      "lf/lfrc".text = let
-        fmtSetting = k: v:
-          optionalString (v != null) "set ${
-            if isBool v then
-              "${optionalString (!v) "no"}${k}"
-            else
-              "${k} ${if isInt v then toString v else ''"${v}"''}"
-          }";
+    xdg.configFile."lf/lfrc".text = let
+      fmtSetting = k: v:
+        optionalString (v != null) "set ${
+          if isBool v then
+            "${optionalString (!v) "no"}${k}"
+          else
+            "${k} ${if isInt v then toString v else ''"${v}"''}"
+        }";
 
-        settingsStr = concatStringsSep "\n"
-          (filter (x: x != "") (mapAttrsToList fmtSetting cfg.settings));
+      settingsStr = concatStringsSep "\n" (filter (x: x != "")
+        (mapAttrsToList fmtSetting
+          (builtins.intersectAttrs knownSettings cfg.settings)));
 
-        fmtCmdMap = before: k: v:
-          "${before} ${k}${optionalString (v != null && v != "") " ${v}"}";
-        fmtCmd = fmtCmdMap "cmd";
-        fmtMap = fmtCmdMap "map";
-        fmtCmap = fmtCmdMap "cmap";
+      fmtCmdMap = before: k: v:
+        "${before} ${k}${optionalString (v != null && v != "") " ${v}"}";
+      fmtCmd = fmtCmdMap "cmd";
+      fmtMap = fmtCmdMap "map";
+      fmtCmap = fmtCmdMap "cmap";
 
-        commandsStr =
-          concatStringsSep "\n" (mapAttrsToList fmtCmd cfg.commands);
-        keybindingsStr =
-          concatStringsSep "\n" (mapAttrsToList fmtMap cfg.keybindings);
-        cmdKeybindingsStr =
-          concatStringsSep "\n" (mapAttrsToList fmtCmap cfg.cmdKeybindings);
+      commandsStr = concatStringsSep "\n" (mapAttrsToList fmtCmd cfg.commands);
+      keybindingsStr =
+        concatStringsSep "\n" (mapAttrsToList fmtMap cfg.keybindings);
+      cmdKeybindingsStr =
+        concatStringsSep "\n" (mapAttrsToList fmtCmap cfg.cmdKeybindings);
 
-        previewerStr = optionalString (cfg.previewer.source != null) ''
-          set previewer ${cfg.previewer.source}
-          ${optionalString (cfg.previewer.keybinding != null) ''
-            map ${cfg.previewer.keybinding} ''$${cfg.previewer.source} "$f" | less -R
-          ''}
-        '';
-      in ''
-        ${settingsStr}
-
-        ${commandsStr}
-
-        ${keybindingsStr}
-
-        ${cmdKeybindingsStr}
-
-        ${previewerStr}
-
-        ${cfg.extraConfig}
+      previewerStr = optionalString (cfg.previewer.source != null) ''
+        set previewer ${cfg.previewer.source}
+        ${optionalString (cfg.previewer.keybinding != null) ''
+          map ${cfg.previewer.keybinding} ''$${cfg.previewer.source} "$f" | less -R
+        ''}
       '';
-    };
+    in ''
+      ${settingsStr}
+
+      ${commandsStr}
+
+      ${keybindingsStr}
+
+      ${cmdKeybindingsStr}
+
+      ${previewerStr}
+
+      ${cfg.extraConfig}
+    '';
   };
 }

@@ -115,7 +115,16 @@
    </arg>
     
    <arg>
-    --max-jobs <replaceable>number</replaceable>
+     <group choice="req">
+       <arg choice="plain">
+         -j
+       </arg>
+
+       <arg choice="plain">
+         --max-jobs
+       </arg>
+     </group>
+     <replaceable>number</replaceable>
    </arg>
     
    <arg>
@@ -418,6 +427,9 @@
    </varlistentry>
    <varlistentry>
     <term>
+     <option>-j <replaceable>number</replaceable></option>
+    </term>
+    <term>
      <option>--max-jobs <replaceable>number</replaceable></option>
     </term>
     <listitem>
@@ -512,7 +524,7 @@
   <para>
    Please report any bugs on the
    <link
-   xlink:href="https://github.com/rycee/home-manager/issues">project
+   xlink:href="https://github.com/nix-community/home-manager/issues">project
    issue tracker</link>.
   </para>
  </refsection>

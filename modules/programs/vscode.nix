@@ -20,17 +20,18 @@ let
     "vscodium" = "vscode-oss";
   }.${vscodePname};
 
-  configFilePath =
-    if pkgs.stdenv.hostPlatform.isDarwin then
-      "Library/Application Support/${configDir}/User/settings.json"
-    else
-      "${config.xdg.configHome}/${configDir}/User/settings.json";
+  userDir = if pkgs.stdenv.hostPlatform.isDarwin then
+    "Library/Application Support/${configDir}/User"
+  else
+    "${config.xdg.configHome}/${configDir}/User";
+
+  configFilePath = "${userDir}/settings.json";
+  keybindingsFilePath = "${userDir}/keybindings.json";
 
   # TODO: On Darwin where are the extensions?
   extensionPath = ".${extensionDir}/extensions";
-in
 
-{
+in {
   options = {
     programs.vscode = {
       enable = mkEnableOption "Visual Studio Code";
@@ -46,7 +47,7 @@ in
 
       userSettings = mkOption {
         type = types.attrs;
-        default = {};
+        default = { };
         example = literalExample ''
           {
             "update.channel" = "none";
@@ -59,9 +60,48 @@ in
         '';
       };
 
+      keybindings = mkOption {
+        type = types.listOf (types.submodule {
+          options = {
+            key = mkOption {
+              type = types.str;
+              example = "ctrl+c";
+              description = "The key or key-combination to bind.";
+            };
+
+            command = mkOption {
+              type = types.str;
+              example = "editor.action.clipboardCopyAction";
+              description = "The VS Code command to execute.";
+            };
+
+            when = mkOption {
+              type = types.str;
+              default = "";
+              example = "textInputFocus";
+              description = "Optional context filter.";
+            };
+          };
+        });
+        default = [ ];
+        example = literalExample ''
+          [
+            {
+              key = "ctrl+c";
+              command = "editor.action.clipboardCopyAction";
+              when = "textInputFocus";
+            }
+          ]
+        '';
+        description = ''
+          Keybindings written to Visual Studio Code's
+          <filename>keybindings.json</filename>.
+        '';
+      };
+
       extensions = mkOption {
         type = types.listOf types.package;
-        default = [];
+        default = [ ];
         example = literalExample "[ pkgs.vscode-extensions.bbenoist.Nix ]";
         description = ''
           The extensions Visual Studio Code should be started with.
@@ -75,24 +115,21 @@ in
     home.packages = [ cfg.package ];
 
     # Adapted from https://discourse.nixos.org/t/vscode-extensions-setup/1801/2
-    home.file =
-      let
-        toPaths = path:
-          # Links every dir in path to the extension path.
-          mapAttrsToList (k: v:
-            {
-              "${extensionPath}/${k}".source = "${path}/${k}";
-            }) (builtins.readDir path);
-        toSymlink = concatMap toPaths cfg.extensions;
-      in
-        foldr
-          (a: b: a // b)
-          {
-            "${configFilePath}" =
-              mkIf (cfg.userSettings != {}) {
-                text = builtins.toJSON cfg.userSettings;
-              };
-          }
-          toSymlink;
+    home.file = let
+      subDir = "share/vscode/extensions";
+      toPaths = path:
+        # Links every dir in path to the extension path.
+        mapAttrsToList
+        (k: _: { "${extensionPath}/${k}".source = "${path}/${subDir}/${k}"; })
+        (builtins.readDir (path + "/${subDir}"));
+      toSymlink = concatMap toPaths cfg.extensions;
+    in foldr (a: b: a // b) {
+      "${configFilePath}" = mkIf (cfg.userSettings != { }) {
+        text = builtins.toJSON cfg.userSettings;
+      };
+      "${keybindingsFilePath}" = mkIf (cfg.keybindings != [ ]) {
+        text = builtins.toJSON cfg.keybindings;
+      };
+    } toSymlink;
   };
 }

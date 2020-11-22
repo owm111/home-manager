@@ -14,6 +14,7 @@ let
       || cfg.sessionVariables != {};
 
   toSystemdIni = generators.toINI {
+    listsAsDuplicateKeys = true;
     mkKeyValue = key: value:
       let
         value' =
@@ -228,7 +229,7 @@ in
       # running this from the NixOS module then XDG_RUNTIME_DIR is not
       # set and systemd commands will fail. We'll therefore have to
       # set it ourselves in that case.
-      home.activation.reloadSystemD = hm.dag.entryAfter ["linkGeneration"] (
+      home.activation.reloadSystemd = hm.dag.entryAfter ["linkGeneration"] (
         let
           autoReloadCmd = ''
             ${pkgs.ruby}/bin/ruby ${./systemd-activate.rb} \
@@ -249,7 +250,7 @@ in
             if [[ $systemdStatus == 'running' || $systemdStatus == 'degraded' ]]; then
               if [[ $systemdStatus == 'degraded' ]]; then
                 warnEcho "The user systemd session is degraded:"
-                ${systemctl} --user --state=failed
+                ${systemctl} --user --no-pager --state=failed
                 warnEcho "Attempting to reload services anyway..."
               fi
 

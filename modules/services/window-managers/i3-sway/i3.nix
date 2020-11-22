@@ -7,7 +7,7 @@ let
   cfg = config.xsession.windowManager.i3;
 
   commonOptions = import ./lib/options.nix {
-    inherit lib cfg pkgs;
+    inherit config lib cfg pkgs;
     moduleName = "i3";
     isGaps = cfg.package == pkgs.i3-gaps;
   };
@@ -101,10 +101,8 @@ let
         '';
         example = literalExample ''
           let
-            modifier = xsession.windowManager.i3.config.modifier;
-          in
-
-          lib.mkOptionDefault {
+            modifier = config.xsession.windowManager.i3.config.modifier;
+          in lib.mkOptionDefault {
             "''${modifier}+Return" = "exec i3-sensible-terminal";
             "''${modifier}+Shift+q" = "kill";
             "''${modifier}+d" = "exec \${pkgs.dmenu}/bin/dmenu_run";
@@ -182,7 +180,7 @@ let
       client.placeholder ${colorSetStr colors.placeholder}
       client.background ${colors.background}
 
-      ${keybindingsStr keybindings}
+      ${keybindingsStr { inherit keybindings; }}
       ${keycodebindingsStr keycodebindings}
       ${concatStringsSep "\n" (mapAttrsToList modeStr modes)}
       ${concatStringsSep "\n" (mapAttrsToList assignStr assigns)}
@@ -194,6 +192,21 @@ let
     ''
   else
     "") + "\n" + cfg.extraConfig);
+
+  # Validates the i3 configuration
+  checkI3Config =
+    pkgs.runCommandLocal "i3-config" { buildInputs = [ cfg.package ]; } ''
+      # We have to make sure the wrapper does not start a dbus session
+      export DBUS_SESSION_BUS_ADDRESS=1
+
+      # A zero exit code means i3 succesfully validated the configuration
+      i3 -c ${configFile} -C -d all || {
+        echo "i3 configuration validation failed"
+        echo "For a verbose log of the failure, run 'i3 -c ${configFile} -C -d all'"
+        exit 1
+      };
+      cp ${configFile} $out
+    '';
 
 in {
   options = {
@@ -231,7 +244,7 @@ in {
       home.packages = [ cfg.package ];
       xsession.windowManager.command = "${cfg.package}/bin/i3";
       xdg.configFile."i3/config" = {
-        source = configFile;
+        source = checkI3Config;
         onChange = ''
           i3Socket=''${XDG_RUNTIME_DIR:-/run/user/$UID}/i3/ipc-socket.*
           if [ -S $i3Socket ]; then
@@ -252,7 +265,7 @@ in {
         warnings = [
           ("'xsession.windowManager.i3.config.startup.*.workspace' is deprecated, "
             + "use 'xsession.windowManager.i3.config.assigns' instead."
-            + "See https://github.com/rycee/home-manager/issues/265.")
+            + "See https://github.com/nix-community/home-manager/issues/265.")
         ];
       })
   ]);

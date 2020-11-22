@@ -165,7 +165,11 @@ function doEdit() {
 
     setConfigFile
 
-    exec "$EDITOR" "$HOME_MANAGER_CONFIG"
+    # Don't quote $EDITOR in order to support values including options, e.g.,
+    # "code --wait".
+    #
+    # shellcheck disable=2086
+    exec $EDITOR "$HOME_MANAGER_CONFIG"
 }
 
 function doBuild() {
@@ -221,7 +225,7 @@ function doListGens() {
         color="always"
     fi
 
-    pushd "/nix/var/nix/profiles/per-user/$USER" > /dev/null
+    pushd "$NIX_STATE_DIR/profiles/per-user/$USER" > /dev/null
     # shellcheck disable=2012
     ls --color=$color -gG --time-style=long-iso --sort time home-manager-*-link \
         | cut -d' ' -f 4- \
@@ -234,7 +238,7 @@ function doListGens() {
 function doRmGenerations() {
     setVerboseAndDryRun
 
-    pushd "/nix/var/nix/profiles/per-user/$USER" > /dev/null
+    pushd "$NIX_STATE_DIR/profiles/per-user/$USER" > /dev/null
 
     for generationId in "$@"; do
         local linkName="home-manager-$generationId-link"
@@ -254,11 +258,11 @@ function doRmGenerations() {
 
 function doRmAllGenerations() {
     $DRY_RUN_CMD rm $VERBOSE_ARG \
-        "/nix/var/nix/profiles/per-user/$USER/home-manager"*
+        "$NIX_STATE_DIR/profiles/per-user/$USER/home-manager"*
 }
 
 function doExpireGenerations() {
-    local profileDir="/nix/var/nix/profiles/per-user/$USER"
+    local profileDir="$NIX_STATE_DIR/profiles/per-user/$USER"
 
     local generations
     generations="$( \
@@ -368,11 +372,12 @@ function doUninstall() {
             HOME_MANAGER_CONFIG="$(mktemp --tmpdir home-manager.XXXXXXXXXX)"
             echo "{ lib, ... }: { home.file = lib.mkForce {}; }" > "$HOME_MANAGER_CONFIG"
             doSwitch
+            $DRY_RUN_CMD nix-env -e home-manager-path || true
             rm "$HOME_MANAGER_CONFIG"
             $DRY_RUN_CMD rm $VERBOSE_ARG -r \
                 "${XDG_DATA_HOME:-$HOME/.local/share}/home-manager"
             $DRY_RUN_CMD rm $VERBOSE_ARG \
-                "/nix/var/nix/gcroots/per-user/$USER/current-home"
+                "$NIX_STATE_DIR/gcroots/per-user/$USER/current-home"
             ;;
         *)
             echo "Yay!"
@@ -419,7 +424,7 @@ function doHelp() {
     echo "  --cores NUM"
     echo "  --keep-failed"
     echo "  --keep-going"
-    echo "  --max-jobs NUM"
+    echo "  -j, --max-jobs NUM"
     echo "  --option NAME VALUE"
     echo "  --show-trace"
     echo "  --(no-)substitute"
@@ -453,6 +458,8 @@ function doHelp() {
     echo
     echo "  uninstall    Remove Home Manager"
 }
+
+readonly NIX_STATE_DIR="${NIX_STATE_DIR:-/nix/var/nix}"
 
 EXTRA_NIX_PATH=()
 HOME_MANAGER_CONFIG_ATTRIBUTE=""
@@ -494,7 +501,7 @@ while [[ $# -gt 0 ]]; do
             PASSTHROUGH_OPTS+=("$opt" "$1" "$2")
             shift 2
             ;;
-        --max-jobs|--cores)
+        -j|--max-jobs|--cores)
             PASSTHROUGH_OPTS+=("$opt" "$1")
             shift
             ;;
@@ -504,6 +511,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v|--verbose)
             export VERBOSE=1
+            ;;
+        --version)
+            echo 21.03
+            exit 0
             ;;
         *)
             case $COMMAND in

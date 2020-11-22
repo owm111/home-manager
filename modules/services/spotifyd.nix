@@ -14,6 +14,18 @@ in {
   options.services.spotifyd = {
     enable = mkEnableOption "SpotifyD connect";
 
+    package = mkOption {
+      type = types.package;
+      default = pkgs.spotifyd;
+      defaultText = literalExample "pkgs.spotifyd";
+      example =
+        literalExample "(pkgs.spotifyd.override { withKeyring = true; })";
+      description = ''
+        The <literal>spotifyd</literal> package to use.
+        Can be used to specify extensions.
+      '';
+    };
+
     settings = mkOption {
       type = types.attrsOf (types.attrsOf types.str);
       default = { };
@@ -21,7 +33,7 @@ in {
       example = literalExample ''
         {
           global = {
-            user = "Alex";
+            username = "Alex";
             password = "foo";
             device_name = "nix";
           };
@@ -31,7 +43,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    home.packages = [ pkgs.spotifyd ];
+    home.packages = [ cfg.package ];
 
     systemd.user.services.spotifyd = {
       Unit = {
@@ -43,7 +55,7 @@ in {
 
       Service = {
         ExecStart =
-          "${pkgs.spotifyd}/bin/spotifyd --no-daemon --config-path ${configFile}";
+          "${cfg.package}/bin/spotifyd --no-daemon --config-path ${configFile}";
         Restart = "always";
         RestartSec = 12;
       };

@@ -16,13 +16,18 @@ This project is under development. I personally use it to manage
 several user configurations but it may fail catastrophically for you.
 So beware!
 
+Before using Home Manager you should be comfortable using the Nix
+language and the various tools in the Nix ecosystem. Reading through
+the [Nix Pills][] document is a good way to familiarize yourself with
+them.
+
 In some cases Home Manager cannot detect whether it will overwrite a
 previous manual configuration. For example, the Gnome Terminal module
 will write to your dconf store and cannot tell whether a configuration
 that it is about to be overwrite was from a previous Home Manager
 generation or from manual configuration.
 
-Home Manager targets [NixOS][] unstable and NixOS version 19.09 (the
+Home Manager targets [NixOS][] unstable and NixOS version 20.09 (the
 current stable version), it may or may not work on other Linux
 distributions and NixOS versions.
 
@@ -46,40 +51,33 @@ Installation
 
 Currently the easiest way to install Home Manager is as follows:
 
-1.  Make sure you have a working Nix installation. If you are not
-    using NixOS then you may here have to run
-
-    ```console
-    $ mkdir -m 0755 -p /nix/var/nix/{profiles,gcroots}/per-user/$USER
-    ```
-
-    since Home Manager uses these directories to manage your profile
-    generations. On NixOS these should already be available.
-
-    Also make sure that your user is able to build and install Nix
-    packages. For example, you should be able to successfully run a
-    command like `nix-instantiate '<nixpkgs>' -A hello` without having
-    to switch to the root user. For a multi-user install of Nix this
-    means that your user must be covered by the
+1.  Make sure you have a working Nix installation. Specifically, make
+    sure that your user is able to build and install Nix packages. For
+    example, you should be able to successfully run a command like
+    `nix-instantiate '<nixpkgs>' -A hello` without having to switch to
+    the root user. For a multi-user install of Nix this means that
+    your user must be covered by the
     [`allowed-users`][nixAllowedUsers] Nix option. On NixOS you can
     control this option using the
     [`nix.allowedUsers`][nixosAllowedUsers] system option.
 
+    Note that Nix 2.4 (`nixUnstable`) is not yet supported.
+
 2.  Add the appropriate Home Manager channel. Typically this is
 
     ```console
-    $ nix-channel --add https://github.com/rycee/home-manager/archive/master.tar.gz home-manager
+    $ nix-channel --add https://github.com/nix-community/home-manager/archive/master.tar.gz home-manager
     $ nix-channel --update
     ```
 
     if you are following Nixpkgs master or an unstable channel and
 
     ```console
-    $ nix-channel --add https://github.com/rycee/home-manager/archive/release-19.09.tar.gz home-manager
+    $ nix-channel --add https://github.com/nix-community/home-manager/archive/release-20.09.tar.gz home-manager
     $ nix-channel --update
     ```
 
-    if you follow a Nixpkgs version 19.09 channel.
+    if you follow a Nixpkgs version 20.09 channel.
 
     On NixOS you may need to log out and back in for the channel to
     become available. On non-NixOS you may have to add
@@ -133,8 +131,8 @@ configuration generations.
 
 As an example, let us expand the initial configuration file from the
 installation above to install the htop and fortune packages, install
-Emacs with a few extra packages enabled, install Firefox with the
-IcedTea plugin enabled, and enable the user gpg-agent service.
+Emacs with a few extra packages enabled, install Firefox with
+smooth scrolling enabled, and enable the user gpg-agent service.
 
 To satisfy the above setup we should elaborate the
 `~/.config/nixpkgs/home.nix` file as follows:
@@ -158,7 +156,13 @@ To satisfy the above setup we should elaborate the
 
   programs.firefox = {
     enable = true;
-    enableIcedTea = true;
+    profiles = {
+      myprofile = {
+        settings = {
+          "general.smoothScroll" = false;
+        };
+      };
+    };
   };
 
   services.gpg-agent = {
@@ -303,6 +307,41 @@ in your system configuration and
 
 in your Home Manager configuration.
 
+Nix Flakes
+----------
+
+Home Manager includes a `flake.nix` file for compatibility with [Nix Flakes][]
+for those that wish to use it as a module. A bare-minimum `flake.nix` would be
+as follows:
+
+```nix
+{
+  description = "NixOS configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    home-manager.url = "github:nix-community/home-manager";
+  };
+
+  outputs = { home-manager, nixpkgs, ... }: {
+    nixosConfigurations = {
+      hostname = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          ./configuration.nix
+          home-manager.nixosModules.home-manager
+          {
+            home-manager.useGlobalPkgs = true;
+            home-manager.useUserPackages = true;
+            home-manager.users.user = import ./home.nix;
+          }
+        ];
+      };
+    };
+  };
+}
+```
+
 Releases
 --------
 
@@ -310,7 +349,7 @@ Home Manager is developed against `nixpkgs-unstable` branch, which
 often causes it to contain tweaks for changes/packages not yet
 released in stable NixOS. To avoid breaking users' configurations,
 Home Manager is released in branches corresponding to NixOS releases
-(e.g. `release-19.09`). These branches get fixes, but usually not new
+(e.g. `release-20.09`). These branches get fixes, but usually not new
 modules. If you need a module to be backported, then feel free to open
 an issue.
 
@@ -321,9 +360,11 @@ an issue.
 [nixAllowedUsers]: https://nixos.org/nix/manual/#conf-allowed-users
 [nixosAllowedUsers]: https://nixos.org/nixos/manual/options.html#opt-nix.allowedUsers
 [Z shell]: http://zsh.sourceforge.net/
-[manual]: https://rycee.gitlab.io/home-manager/
-[configuration options]: https://rycee.gitlab.io/home-manager/options.html
+[manual]: https://nix-community.github.io/home-manager/
+[configuration options]: https://nix-community.github.io/home-manager/options.html
 [#home-manager]: https://webchat.freenode.net/?url=irc%3A%2F%2Firc.freenode.net%2Fhome-manager
 [freenode]: https://freenode.net/
 [channel logs]: https://logs.nix.samueldr.com/home-manager/
 [samueldr]: https://github.com/samueldr/
+[Nix Pills]: https://nixos.org/nixos/nix-pills/
+[Nix Flakes]: https://nixos.wiki/wiki/Flakes

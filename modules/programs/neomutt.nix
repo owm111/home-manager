@@ -111,7 +111,9 @@ let
     } else
       let
         smtpProto = if smtp.tls.enable then "smtps" else "smtp";
-        smtpBaseUrl = "${smtpProto}://${escape userName}@${smtp.host}";
+        smtpPort = if smtp.port != null then ":${toString smtp.port}" else "";
+        smtpBaseUrl =
+          "${smtpProto}://${escape userName}@${smtp.host}${smtpPort}";
       in {
         smtp_url = "'${smtpBaseUrl}'";
         smtp_pass = "'`${passCmd}`'";
@@ -122,7 +124,7 @@ let
     let
       folderHook = mapAttrsToList setOption (genCommonFolderHooks account // {
         folder = "'${account.maildir.absPath}'";
-      }) ++ optional (neomutt.extraConfig != "") neomutt.extraConfig;
+      });
     in ''
       ${concatStringsSep "\n" folderHook}
     '';
@@ -261,6 +263,10 @@ in {
         default = "";
         description = "Extra configuration appended to the end.";
       };
+    };
+
+    accounts.email.accounts = mkOption {
+      type = with types; attrsOf (submodule (import ./neomutt-accounts.nix));
     };
   };
 

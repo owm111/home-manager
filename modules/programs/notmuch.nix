@@ -143,6 +143,13 @@ in {
         };
       };
     };
+
+    accounts.email.accounts = mkOption {
+      type = with types;
+        attrsOf (submodule {
+          options.notmuch.enable = mkEnableOption "notmuch indexing";
+        });
+    };
   };
 
   config = mkIf cfg.enable {

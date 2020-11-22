@@ -6,10 +6,13 @@ let
 
   cfg = config.programs.gnome-terminal;
 
-  vteInitStr = ''
-    # gnome-terminal: Show current directory in the terminal window title.
-    . ${pkgs.gnome3.vte}/etc/profile.d/vte.sh
-  '';
+  eraseBinding = types.enum [
+    "auto"
+    "ascii-backspace"
+    "ascii-delete"
+    "delete-sequence"
+    "tty"
+  ];
 
   backForeSubModule = types.submodule ({ ... }: {
     options = {
@@ -127,6 +130,104 @@ let
           The number of scrollback lines to keep, null for infinite.
         '';
       };
+
+      customCommand = mkOption {
+        default = null;
+        type = types.nullOr types.str;
+        description = ''
+          The command to use to start the shell, or null for default shell.
+        '';
+      };
+
+      loginShell = mkOption {
+        default = false;
+        type = types.bool;
+        description = "Run command as a login shell.";
+      };
+
+      backspaceBinding = mkOption {
+        default = "ascii-delete";
+        type = eraseBinding;
+        description = ''
+          Which string the terminal should send to an application when the user
+          presses the <emphasis>Backspace</emphasis> key.
+
+          <variablelist>
+            <varlistentry>
+              <term><literal>auto</literal></term>
+              <listitem><para>
+                Attempt to determine the right value from the terminal's IO settings.
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>ascii-backspace</literal></term>
+              <listitem><para>
+                Send an ASCII backspace character (0x08).
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>ascii-delete</literal></term>
+              <listitem><para>
+                Send an ASCII delete character (0x7F).
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>delete-sequence</literal></term>
+              <listitem><para>
+                Send the <quote>@7</quote> control sequence.
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>tty</literal></term>
+              <listitem><para>
+                Send terminal’s <quote>erase</quote> setting.
+              </para></listitem>
+            </varlistentry>
+          </variablelist>
+        '';
+      };
+
+      deleteBinding = mkOption {
+        default = "delete-sequence";
+        type = eraseBinding;
+        description = ''
+          Which string the terminal should send to an application when the user
+          presses the <emphasis>Delete</emphasis> key.
+
+          <variablelist>
+            <varlistentry>
+              <term><literal>auto</literal></term>
+              <listitem><para>
+                Send the <quote>@7</quote> control sequence.
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>ascii-backspace</literal></term>
+              <listitem><para>
+                Send an ASCII backspace character (0x08).
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>ascii-delete</literal></term>
+              <listitem><para>
+                Send an ASCII delete character (0x7F).
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>delete-sequence</literal></term>
+              <listitem><para>
+                Send the <quote>@7</quote> control sequence.
+              </para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><literal>tty</literal></term>
+              <listitem><para>
+                Send terminal’s <quote>erase</quote> setting.
+              </para></listitem>
+            </varlistentry>
+          </variablelist>
+        '';
+      };
     };
   });
 
@@ -137,7 +238,15 @@ let
       scrollback-lines = pcfg.scrollbackLines;
       cursor-shape = pcfg.cursorShape;
       cursor-blink-mode = pcfg.cursorBlinkMode;
-    } // (if (pcfg.font == null) then {
+      login-shell = pcfg.loginShell;
+      backspace-binding = pcfg.backspaceBinding;
+      delete-binding = pcfg.deleteBinding;
+    } // (if (pcfg.customCommand != null) then {
+      use-custom-command = true;
+      custom-command = pcfg.customCommand;
+    } else {
+      use-custom-command = false;
+    }) // (if (pcfg.font == null) then {
       use-system-font = true;
     } else {
       use-system-font = false;
@@ -186,7 +295,7 @@ in {
 
       themeVariant = mkOption {
         default = "default";
-        type = types.enum [ "default" "light" "dark" ];
+        type = types.enum [ "default" "light" "dark" "system" ];
         description = "The theme variation to request";
       };
 
@@ -199,7 +308,7 @@ in {
   };
 
   config = mkIf cfg.enable {
-    home.packages = [ pkgs.gnome3.gnome_terminal ];
+    home.packages = [ pkgs.gnome3.gnome-terminal ];
 
     dconf.settings = let dconfPath = "org/gnome/terminal/legacy";
     in {
@@ -217,7 +326,7 @@ in {
     (n: v: nameValuePair ("${dconfPath}/profiles:/:${n}") (buildProfileSet v))
     cfg.profile;
 
-    programs.bash.initExtra = mkBefore vteInitStr;
-    programs.zsh.initExtra = vteInitStr;
+    programs.bash.enableVteIntegration = true;
+    programs.zsh.enableVteIntegration = true;
   };
 }

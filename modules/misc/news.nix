@@ -452,7 +452,7 @@ in
 
       {
         time = "2017-12-11T17:23:12+00:00";
-        condition = config.home.activation ? reloadSystemD;
+        condition = config.home.activation ? reloadSystemd;
         message = ''
           The Boolean option 'systemd.user.startServices' is now
           available. When enabled the current naive systemd unit
@@ -508,7 +508,7 @@ in
           configuration you can add
 
               imports = [
-                "''${builtins.fetchTarball https://github.com/rycee/home-manager/archive/master.tar.gz}/nixos"
+                "''${builtins.fetchTarball https://github.com/nix-community/home-manager/archive/master.tar.gz}/nixos"
               ];
 
           to your 'configuration.nix' file. This will introduce a new
@@ -1363,7 +1363,7 @@ in
 
           To learn more, see the installation section of the manual
 
-            https://rycee.gitlab.io/home-manager/#sec-install-nixos-module
+            https://nix-community.github.io/home-manager/#sec-install-nixos-module
         '';
       }
 
@@ -1476,9 +1476,287 @@ in
       }
 
       {
-        time = "2020-04-18T20:22:52+00:00";
+        time = "2020-04-23T19:45:26+00:00";
         message = ''
           A new module is available: 'programs.lf'
+        '';
+      }
+
+      {
+        time = "2020-04-26T13:46:28+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.pulseeffects'
+        '';
+      }
+
+      {
+        time = "2020-05-03T11:13:07+00:00";
+        message = ''
+          A new module is available: 'programs.i3status'
+        '';
+      }
+
+      {
+        time = "2020-05-03T11:21:42+00:00";
+        message = ''
+          A new module is available: 'programs.aria2'
+        '';
+      }
+
+      {
+        time = "2020-05-04T21:19:43+00:00";
+        condition = config.programs.git.enable;
+        message = ''
+          The Git module now supports the 'delta' syntax highlighter.
+
+          It can be enabled through the option 'programs.git.delta.enable'.
+        '';
+      }
+
+      {
+        time = "2020-05-12T20:09:54+00:00";
+        message = ''
+          A new module is available: 'programs.dircolors'
+        '';
+      }
+
+      {
+        time = "2020-05-26T17:13:58+00:00";
+        message = ''
+          A new module is available: 'programs.zoxide'
+        '';
+      }
+
+      {
+        time = "2020-06-03T17:46:11+00:00";
+        condition = config.programs.ssh.enable;
+        message = ''
+          The ssh module now supports the 'ServerAliveCountMax' option
+          both globally through
+
+              programs.ssh.serverAliveCountMax
+
+          and per match blocks
+
+              programs.ssh.matchBlocks.<name>.serverAliveCountMax
+        '';
+      }
+
+      {
+        time = "2020-06-11T18:06:37+00:00";
+        condition = hostPlatform.isLinux && config.services.emacs.enable;
+        message = ''
+          The Emacs service now supports systemd socket activation.
+
+          It can be enabled through the option 'services.emacs.socketActivation.enable'.
+        '';
+      }
+
+      {
+        time = "2020-06-12T17:48:01+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.clipmenu'
+        '';
+      }
+
+      {
+        time = "2020-06-12T07:08:09+00:00";
+        condition = config.programs.bash.enable;
+        message = ''
+          A new module is available: 'programs.powerline-go'
+        '';
+      }
+
+      {
+        time = "2020-06-14T13:30:19+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'service.fluidsynth'
+        '';
+      }
+
+      {
+        time = "2020-06-17T22:17:52+00:00";
+        condition = config.programs.git.enable;
+        message = ''
+          Since May 1, 2020 string values in Git configurations are
+          automatically escaped. If you have any manually escaped characters,
+          then you may need to restore them to their unescaped form to avoid
+          double escaping.
+
+          In other words, if you now have something along the lines of
+
+              programs.git.aliases.hello = '''"!echo $'Hello\\nWorld'"''';
+
+          you must replace it by the unescaped form
+
+              programs.git.aliases.hello = "!echo $'Hello\nWorld'";
+
+          Apologies for the belated notification!
+        '';
+      }
+
+      {
+        time = "2020-06-23T20:06:39+00:00";
+        message = ''
+          A new module is available: 'programs.ne'
+        '';
+      }
+
+      {
+        time = "2020-07-24T15:03:11+00:00";
+        message = ''
+          A new module is available: 'programs.nushell'.
+        '';
+      }
+
+      {
+        time = "2020-07-25T21:04:59+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.dropbox'.
+        '';
+      }
+
+      {
+        time = "2020-08-13T22:15:27+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'programs.waybar'
+        '';
+      }
+
+      {
+        time = "2020-08-14T22:44:20+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.kanshi'
+        '';
+      }
+
+      {
+        time = "2020-08-25T22:14:01+00:00";
+        message = ''
+          A new module is available: 'programs.mcfly'
+        '';
+      }
+
+      {
+        time = "2020-09-01T18:38:18+00:00";
+        message = ''
+          A new module is available: 'programs.ncmpcpp'
+        '';
+      }
+
+      {
+        time = "2020-09-11T10:06:47+00:00";
+        condition = hostPlatform.isLinux && config.targets.genericLinux.enable;
+        message = ''
+          A new option 'targets.genericLinux.extraXdgDataDirs' is available
+          to setup the user environment with the OS's data files.
+
+          This is useful for example to get Bash completion for
+          'systemctl' which shouldn't be installed through Home Manager.
+
+          This is also useful to have non Home Manager applications
+          available in menus.
+        '';
+      }
+
+      {
+        time = "2020-09-09T06:54:59+00:00";
+        condition = config.programs.man.enable;
+        message = ''
+          A new option 'programs.man.generateCaches' was added to
+          support the apropos command.
+        '';
+      }
+
+      {
+        time = "2020-09-22T21:03:28+00:00";
+        message = ''
+          A new module is available: 'programs.pet'.
+        '';
+      }
+
+      {
+        time = "2020-09-29T21:21:44+00:00";
+        message = ''
+          A new module is available: 'programs.mu'.
+        '';
+      }
+
+      {
+        time = "2020-10-08T21:28:16+00:00";
+        message = ''
+          A new module is available: 'programs.autojump'
+
+          The option `programs.bash.enableAutojump` is deprecated and this new
+          module should be used instead.
+        '';
+      }
+
+      {
+        time = "2020-10-12T00:12:23+00:00";
+        condition = config.programs.zsh.enable;
+        message = ''
+          A new zsh submodule is available: 'programs.zsh.prezto'.
+        '';
+      }
+
+      {
+        time = "2020-10-22T21:10:38+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.gammastep'.
+        '';
+      }
+
+      {
+        time = "2020-10-22T21:30:42+00:00";
+        message = ''
+          A new module is available: 'programs.gh'.
+        '';
+      }
+
+      {
+        time = "2020-11-01T11:17:02+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'services.caffeine'.
+        '';
+      }
+
+      {
+        time = "2020-11-05T22:59:21+00:00";
+        condition = hostPlatform.isLinux;
+        message = ''
+          A new module is available: 'programs.i3status-rust'.
+        '';
+      }
+
+      {
+        time = "2020-11-14T13:02:40+00:00";
+        condition = config.programs.broot.enable;
+        message = ''
+          The 'programs.broot.verbs' option is now a list rather than an
+          attribute set. To migrate, move the keys of the attrset into the
+          list items' 'invocation' keys. For example,
+
+            programs.broot.verbs = {
+              "p" = { execution = ":parent"; };
+            };
+
+          becomes
+
+            programs.broot.verbs = [
+              {
+                invocation = "p";
+                execution = ":parent";
+              }
+            ];
         '';
       }
     ];

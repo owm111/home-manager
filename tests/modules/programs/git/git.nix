@@ -14,7 +14,6 @@ let
   substituteExpected = path:
     pkgs.substituteAll {
       src = path;
-
       git_include_path = pkgs.writeText "contents"
         (builtins.readFile ./git-expected-include.conf);
     };
@@ -28,6 +27,7 @@ in {
         aliases = {
           a1 = "foo";
           a2 = "bar";
+          escapes = ''"\n	'';
         };
         extraConfig = {
           extra = {
@@ -55,6 +55,18 @@ in {
         userEmail = "user@example.org";
         userName = "John Doe";
         lfs.enable = true;
+        delta = {
+          enable = true;
+          options = {
+            features = "decorations";
+            whitespace-error-style = "22 reverse";
+            decorations = {
+              commit-decoration-style = "bold yellow box ul";
+              file-style = "bold yellow ul";
+              file-decoration-style = "none";
+            };
+          };
+        };
       }
 
       {
@@ -65,6 +77,17 @@ in {
         extraConfig.extra.multiple = [ 2 ];
         extraConfig.extra.subsection.value = "test";
       }
+    ];
+
+    nixpkgs.overlays = [
+      (self: super: {
+        git-lfs = pkgs.writeScriptBin "dummy-git-lfs" "";
+        gitAndTools = super.gitAndTools // {
+          delta = pkgs.writeScriptBin "dummy-delta" "" // {
+            outPath = "@delta@";
+          };
+        };
+      })
     ];
 
     nmt.script = ''

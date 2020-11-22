@@ -18,6 +18,14 @@ let
     mapAttrsToList (k: v: "alias ${k}=${lib.escapeShellArg v}") cfg.shellAliases
   );
 
+  globalAliasesStr = concatStringsSep "\n" (
+    mapAttrsToList (k: v: "alias -g ${k}=${lib.escapeShellArg v}") cfg.shellGlobalAliases
+  );
+
+  dirHashesStr = concatStringsSep "\n" (
+    mapAttrsToList (k: v: ''hash -d ${k}="${v}"'') cfg.dirHashes
+  );
+
   zdotdir = "$HOME/" + cfg.dotDir;
 
   bindkeyCommands = {
@@ -181,6 +189,14 @@ in
         type = types.nullOr types.bool;
       };
 
+      cdpath = mkOption {
+        default = [];
+        description = ''
+          List of paths to autocomplete calls to `cd`.
+        '';
+        type = types.listOf types.str;
+      };
+
       dotDir = mkOption {
         default = null;
         example = ".config/zsh";
@@ -203,6 +219,36 @@ in
         description = ''
           An attribute set that maps aliases (the top level attribute names in
           this option) to command strings or directly to build outputs.
+        '';
+        type = types.attrsOf types.str;
+      };
+
+      shellGlobalAliases = mkOption {
+        default = {};
+        example = literalExample ''
+          {
+            UUID = "$(uuidgen | tr -d \\n)";
+            G = "| grep";
+          }
+        '';
+        description = ''
+          Similar to <varname><link linkend="opt-programs.zsh.shellAliases">opt-programs.zsh.shellAliases</link></varname>,
+          but are substituted anywhere on a line.
+        '';
+        type = types.attrsOf types.str;
+      };
+
+      dirHashes = mkOption {
+        default = {};
+        example = literalExample ''
+          {
+            docs  = "$HOME/Documents";
+            vids  = "$HOME/Videos";
+            dl    = "$HOME/Downloads";
+          }
+        '';
+        description = ''
+          An attribute set that adds to named directory hash table.
         '';
         type = types.attrsOf types.str;
       };
@@ -373,6 +419,10 @@ in
       home.file."${relToDotDir ".zshrc"}".text = ''
         typeset -U path cdpath fpath manpath
 
+        ${optionalString (cfg.cdpath != []) ''
+          cdpath+=(${concatStringsSep " " cfg.cdpath})
+        ''}
+
         for profile in ''${(z)NIX_PROFILES}; do
           fpath+=($profile/share/zsh/site-functions $profile/share/zsh/$ZSH_VERSION/functions $profile/share/zsh/vendor-completions)
         done
@@ -393,10 +443,10 @@ in
           fpath+="$HOME/${pluginsDir}/${plugin.name}"
         '') cfg.plugins)}
 
-        # Oh-My-Zsh calls compinit during initialization,
+        # Oh-My-Zsh/Prezto calls compinit during initialization,
         # calling it twice causes sight start up slowdown
         # as all $fpath entries will be traversed again.
-        ${optionalString (cfg.enableCompletion && !cfg.oh-my-zsh.enable)
+        ${optionalString (cfg.enableCompletion && !cfg.oh-my-zsh.enable && !cfg.prezto.enable)
           "autoload -U compinit && compinit"
         }
 
@@ -424,6 +474,9 @@ in
             source $ZSH/oh-my-zsh.sh
         ''}
 
+        ${optionalString cfg.prezto.enable
+            (builtins.readFile "${pkgs.zsh-prezto}/runcoms/zshrc")}
+
         ${concatStrings (map (plugin: ''
           if [ -f "$HOME/${pluginsDir}/${plugin.name}/${plugin.file}" ]; then
             source "$HOME/${pluginsDir}/${plugin.name}/${plugin.file}"
@@ -431,7 +484,7 @@ in
         '') cfg.plugins)}
 
         # History options should be set in .zshrc and after oh-my-zsh sourcing.
-        # See https://github.com/rycee/home-manager/issues/177.
+        # See https://github.com/nix-community/home-manager/issues/177.
         HISTSIZE="${toString cfg.history.size}"
         SAVEHIST="${toString cfg.history.save}"
         ${if versionAtLeast config.home.stateVersion "20.03"
@@ -451,12 +504,18 @@ in
 
         # Aliases
         ${aliasesStr}
+
+        # Global Aliases
+        ${globalAliasesStr}
+
+        # Named Directory Hashes
+        ${dirHashesStr}
       '';
     }
 
     (mkIf cfg.oh-my-zsh.enable {
       # Make sure we create a cache directory since some plugins expect it to exist
-      # See: https://github.com/rycee/home-manager/issues/761
+      # See: https://github.com/nix-community/home-manager/issues/761
       home.file."${config.xdg.cacheHome}/oh-my-zsh/.keep".text = "";
     })
 

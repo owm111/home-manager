@@ -9,7 +9,10 @@ let
   extendedLib = import ../modules/lib/stdlib-extended.nix pkgs.lib;
 
   hmModule = types.submoduleWith {
-    specialArgs = { lib = extendedLib; };
+    specialArgs = {
+      lib = extendedLib;
+      nixosConfig = config;
+    };
     modules = [
       ({ name, ... }: {
         imports = import ../modules/modules.nix {
@@ -85,8 +88,10 @@ in {
       })));
 
     users.users = mkIf cfg.useUserPackages
-      (mapAttrs (username: usercfg: { packages = usercfg.home.packages; })
+      (mapAttrs (username: usercfg: { packages = [ usercfg.home.path ]; })
         cfg.users);
+
+    environment.pathsToLink = mkIf cfg.useUserPackages [ "/etc/profile.d" ];
 
     systemd.services = mapAttrs' (_: usercfg:
       let username = usercfg.home.username;
@@ -97,6 +102,8 @@ in {
         after = [ "nix-daemon.socket" ];
 
         environment = serviceEnvironment;
+
+        unitConfig = { RequiresMountsFor = usercfg.home.homeDirectory; };
 
         serviceConfig = {
           User = usercfg.home.username;

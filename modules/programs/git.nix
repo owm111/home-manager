@@ -19,9 +19,19 @@ let
     else
       ''${section} "${subsection}"'';
 
+  mkValueString = v:
+    let
+      escapedV = ''
+        "${
+          replaceStrings [ "\n" "	" ''"'' "\\" ] [ "\\n" "\\t" ''\"'' "\\\\" ] v
+        }"'';
+    in generators.mkValueStringDefault { } (if isString v then escapedV else v);
+
   # generation for multiple ini values
   mkKeyValue = k: v:
-    let mkKeyValue = generators.mkKeyValueDefault { } " = " k;
+    let
+      mkKeyValue =
+        generators.mkKeyValueDefault { inherit mkValueString; } " = " k;
     in concatStringsSep "\n" (map (kv: "	" + mkKeyValue kv) (toList v));
 
   # converts { a.b.c = 5; } to { "a.b".c = 5; } for toINI
@@ -205,6 +215,36 @@ in {
           '';
         };
       };
+
+      delta = {
+        enable = mkEnableOption "" // {
+          description = ''
+            Whether to enable the <command>delta</command> syntax highlighter.
+            See <link xlink:href="https://github.com/dandavison/delta" />.
+          '';
+        };
+
+        options = mkOption {
+          type = with types;
+            let
+              primitiveType = either str (either bool int);
+              sectionType = attrsOf primitiveType;
+            in attrsOf (either primitiveType sectionType);
+          default = { };
+          example = {
+            features = "decorations";
+            whitespace-error-style = "22 reverse";
+            decorations = {
+              commit-decoration-style = "bold yellow box ul";
+              file-style = "bold yellow ul";
+              file-decoration-style = "none";
+            };
+          };
+          description = ''
+            Options to configure delta.
+          '';
+        };
+      };
     };
   };
 
@@ -237,7 +277,14 @@ in {
         genIdentity = name: account:
           with account;
           nameValuePair "sendemail.${name}" ({
-            smtpEncryption = if smtp.tls.enable then "tls" else "";
+            smtpEncryption = if smtp.tls.enable then
+              (if smtp.tls.useStartTls
+              || versionOlder config.home.stateVersion "20.09" then
+                "tls"
+              else
+                "ssl")
+            else
+              "";
             smtpServer = smtp.host;
             smtpUser = userName;
             from = address;
@@ -297,6 +344,16 @@ in {
           required = true;
           smudge = concatStringsSep " "
             ([ "git-lfs" "smudge" ] ++ skipArg ++ [ "--" "%f" ]);
+        };
+    })
+
+    (mkIf cfg.delta.enable {
+      programs.git.iniContent =
+        let deltaCommand = "${pkgs.gitAndTools.delta}/bin/delta";
+        in {
+          core.pager = deltaCommand;
+          interactive.diffFilter = "${deltaCommand} --color-only";
+          delta = cfg.delta.options;
         };
     })
   ]);

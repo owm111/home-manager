@@ -8,7 +8,8 @@ let
   cfg = config.programs.mpv;
 
   mpvOption = with types; either str (either int (either bool float));
-  mpvOptions = with types; attrsOf mpvOption;
+  mpvOptionDup = with types; either mpvOption (listOf mpvOption);
+  mpvOptions = with types; attrsOf mpvOptionDup;
   mpvProfiles = with types; attrsOf mpvOptions;
   mpvBindings = with types; attrsOf str;
 
@@ -22,27 +23,45 @@ let
       string = option;
     }.${typeOf option};
 
-  renderOptions = options:
-    concatStringsSep "\n" (mapAttrsToList (name: value:
-      let
-        rendered = renderOption value;
-        length = toString (stringLength rendered);
-      in "${name}=%${length}%${rendered}") options);
+  renderOptionValue = value:
+    let
+      rendered = renderOption value;
+      length = toString (stringLength rendered);
+    in "%${length}%${rendered}";
 
-  renderProfiles = profiles:
-    concatStringsSep "\n" (mapAttrsToList (name: value: ''
-      [${name}]
-      ${renderOptions value}
-    '') profiles);
+  renderOptions = generators.toKeyValue {
+    mkKeyValue =
+      generators.mkKeyValueDefault { mkValueString = renderOptionValue; } "=";
+    listsAsDuplicateKeys = true;
+  };
+
+  renderProfiles = generators.toINI {
+    mkKeyValue =
+      generators.mkKeyValueDefault { mkValueString = renderOptionValue; } "=";
+    listsAsDuplicateKeys = true;
+  };
 
   renderBindings = bindings:
     concatStringsSep "\n"
     (mapAttrsToList (name: value: "${name} ${value}") bindings);
 
+  mpvPackage = if cfg.scripts == [ ] then
+    pkgs.mpv
+  else
+    pkgs.wrapMpv pkgs.mpv-unwrapped { scripts = cfg.scripts; };
+
 in {
   options = {
     programs.mpv = {
       enable = mkEnableOption "mpv";
+
+      package = mkOption {
+        type = types.package;
+        readOnly = true;
+        description = ''
+          Resulting mpv package.
+        '';
+      };
 
       scripts = mkOption {
         type = with types; listOf (either package str);
@@ -121,12 +140,8 @@ in {
 
   config = mkIf cfg.enable (mkMerge [
     {
-      home.packages = [
-        (if cfg.scripts == [ ] then
-          pkgs.mpv
-        else
-          pkgs.mpv-with-scripts.override { scripts = cfg.scripts; })
-      ];
+      home.packages = [ mpvPackage ];
+      programs.mpv.package = mpvPackage;
     }
     (mkIf (cfg.config != { } || cfg.profiles != { }) {
       xdg.configFile."mpv/mpv.conf".text = ''

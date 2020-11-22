@@ -27,10 +27,18 @@ in {
     home.packages = [
       # Explicitly install package to provide basic mime types.
       pkgs.shared-mime-info
+
+      # Make sure the target directories will be real directories.
+      (pkgs.runCommandLocal "dummy-xdg-mime-dirs1" { } ''
+        mkdir -p $out/share/{applications,mime/packages}
+      '')
+      (pkgs.runCommandLocal "dummy-xdg-mime-dirs2" { } ''
+        mkdir -p $out/share/{applications,mime/packages}
+      '')
     ];
 
     home.extraProfileCommands = ''
-      if [[ -w $out/share/mime && -d $out/share/mime/packages ]]; then
+      if [[ -w $out/share/mime && -w $out/share/mime/packages && -d $out/share/mime/packages ]]; then
         XDG_DATA_DIRS=$out/share \
         PKGSYSTEM_ENABLE_FSYNC=0 \
         ${pkgs.buildPackages.shared-mime-info}/bin/update-mime-database \

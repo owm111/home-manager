@@ -7,7 +7,7 @@ let
   cfg = config.wayland.windowManager.sway;
 
   commonOptions = import ./lib/options.nix {
-    inherit lib cfg pkgs;
+    inherit config lib cfg pkgs;
     moduleName = "sway";
     capitalModuleName = "Sway";
   };
@@ -115,7 +115,6 @@ let
           "${cfg.config.modifier}+minus" = "scratchpad show";
 
           "${cfg.config.modifier}+Shift+c" = "reload";
-          "${cfg.config.modifier}+Shift+r" = "restart";
           "${cfg.config.modifier}+Shift+e" =
             "exec swaynag -t warning -m 'You pressed the exit shortcut. Do you really want to exit sway? This will end your Wayland session.' -b 'Yes, exit sway' 'swaymsg exit'";
 
@@ -131,14 +130,21 @@ let
         '';
         example = literalExample ''
           let
-            modifier = cfg.config.modifier;
-          in
-
-          lib.mkOptionDefault {
+            modifier = config.wayland.windowManager.sway.config.modifier;
+          in lib.mkOptionDefault {
             "''${modifier}+Return" = "exec ${cfg.config.terminal}";
             "''${modifier}+Shift+q" = "kill";
             "''${modifier}+d" = "exec ${cfg.config.menu}";
           }
+        '';
+      };
+
+      bindkeysToCode = mkOption {
+        type = types.bool;
+        default = false;
+        example = true;
+        description = ''
+          Whether to make use of <option>--to-code</option> in keybindings.
         '';
       };
 
@@ -154,7 +160,7 @@ let
       output = mkOption {
         type = types.attrsOf (types.attrsOf types.str);
         default = { };
-        example = { "HDMI-A-2" = { bg = "~/path/to/background.png"; }; };
+        example = { "HDMI-A-2" = { bg = "~/path/to/background.png fill"; }; };
         description = ''
           An attribute set that defines output modules. See man sway_output for options.
         '';
@@ -247,7 +253,7 @@ let
       } ${toString floating.border}
       hide_edge_borders ${window.hideEdgeBorders}
       focus_wrapping ${if focus.forceWrapping then "yes" else "no"}
-      focus_follows_mouse ${if focus.followMouse then "yes" else "no"}
+      focus_follows_mouse ${focus.followMouse}
       focus_on_window_activation ${focus.newWindow}
       mouse_warping ${if focus.mouseWarping then "output" else "none"}
       workspace_layout ${workspaceLayout}
@@ -262,7 +268,11 @@ let
       client.placeholder ${colorSetStr colors.placeholder}
       client.background ${colors.background}
 
-      ${keybindingsStr keybindings}
+      ${keybindingsStr {
+        inherit keybindings;
+        bindsymArgs =
+          lib.optionalString (cfg.config.bindkeysToCode) "--to-code";
+      }}
       ${keycodebindingsStr keycodebindings}
       ${concatStringsSep "\n" (mapAttrsToList inputStr input)}
       ${concatStringsSep "\n" (mapAttrsToList outputStr output)}
@@ -288,15 +298,21 @@ let
   };
 
 in {
+  meta.maintainers = [ maintainers.alexarice ];
+
   options.wayland.windowManager.sway = {
     enable = mkEnableOption "sway wayland compositor";
 
     package = mkOption {
-      type = types.package;
+      type = with types; nullOr package;
       default = defaultSwayPackage;
       defaultText = literalExample "${pkgs.sway}";
       description = ''
-        Sway package to use. Will override the options 'wrapperFeatures', 'extraSessionCommands', and 'extraOptions'.
+        Sway package to use. Will override the options
+        'wrapperFeatures', 'extraSessionCommands', and 'extraOptions'.
+        Set to <code>null</code> to not add any Sway package to your
+        path. This should be done if you want to use the NixOS Sway
+        module to install Sway.
       '';
     };
 
@@ -375,14 +391,15 @@ in {
   };
 
   config = mkIf cfg.enable {
-    home.packages = [ cfg.package ] ++ optional cfg.xwayland pkgs.xwayland;
+    home.packages = optional (cfg.package != null) cfg.package
+      ++ optional cfg.xwayland pkgs.xwayland;
     xdg.configFile."sway/config" = {
       source = configFile;
       onChange = ''
-        swaySocket=''${XDG_RUNTIME_DIR:-/run/user/$UID}/sway-ipc.$UID.$(${pkgs.procps}/bin/pgrep -x sway).sock
+        swaySocket=''${XDG_RUNTIME_DIR:-/run/user/$UID}/sway-ipc.$UID.$(${pkgs.procps}/bin/pgrep -x sway || ${pkgs.coreutils}/bin/true).sock
         if [ -S $swaySocket ]; then
           echo "Reloading sway"
-          $DRY_RUN_CMD ${cfg.package}/bin/swaymsg -s $swaySocket reload
+          $DRY_RUN_CMD ${pkgs.sway}/bin/swaymsg -s $swaySocket reload
         fi
       '';
     };

@@ -39,6 +39,13 @@ in
   };
 
   config = {
+    lib.file.mkOutOfStoreSymlink = path:
+      let
+        pathStr = toString path;
+        name = hm.strings.storeFileName (baseNameOf pathStr);
+      in
+        pkgs.runCommandLocal name {} ''ln -s ${escapeShellArg pathStr} $out'';
+
     # This verifies that the links we are about to create will not
     # overwrite an existing file.
     home.activation.checkLinkTargets = hm.dag.entryBefore ["writeBoundary"] (
@@ -83,10 +90,10 @@ in
                   errorEcho "Existing file '$backup' would be clobbered by backing up '$targetPath'"
                   collision=1
                 else
-                  warnEcho "Existing file '$targetPath' is in the way, will be moved to '$backup'"
+                  warnEcho "Existing file '$targetPath' is in the way of '$sourcePath', will be moved to '$backup'"
                 fi
               else
-                errorEcho "Existing file '$targetPath' is in the way"
+                errorEcho "Existing file '$targetPath' is in the way of '$sourcePath'"
                 collision=1
               fi
             fi
@@ -162,7 +169,7 @@ in
             if [[ -e "$newGenFiles/$relativePath" ]] ; then
               $VERBOSE_ECHO "Checking $targetPath: exists"
             elif [[ ! "$(readlink "$targetPath")" == $homeFilePattern ]] ; then
-              warnEcho "Path '$targetPath' not link into Home Manager generation. Skipping delete."
+              warnEcho "Path '$targetPath' does not link into a Home Manager generation. Skipping delete."
             else
               $VERBOSE_ECHO "Checking $targetPath: gone (deleting)"
               $DRY_RUN_CMD rm $VERBOSE_ARG "$targetPath"
@@ -250,7 +257,7 @@ in
     home-files = pkgs.runCommand
       "home-manager-files"
       {
-        nativeBuildInputs = [ pkgs.xlibs.lndir ];
+        nativeBuildInputs = [ pkgs.xorg.lndir ];
         preferLocalBuild = true;
         allowSubstitutes = false;
       }
@@ -309,12 +316,15 @@ in
         }
       '' + concatStrings (
         mapAttrsToList (n: v: ''
-          insertFile "${sourceStorePath v}" \
-                     "${v.target}" \
-                     "${if v.executable == null
-                        then "inherit"
-                        else builtins.toString v.executable}" \
-                     "${builtins.toString v.recursive}"
+          insertFile ${
+            escapeShellArgs [
+              (sourceStorePath v)
+              v.target
+              (if v.executable == null
+               then "inherit"
+               else toString v.executable)
+              (toString v.recursive)
+            ]}
         '') cfg
       ));
   };
